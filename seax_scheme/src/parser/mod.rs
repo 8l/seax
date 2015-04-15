@@ -414,11 +414,11 @@ pub fn expr(input: State<&str>) -> ParseResult<ExprNode, &str> {
         between(
             satisfy(|c| c == '('),
             satisfy(|c| c == ')'),
-            parser(name)
+            parser(expr)
                 .and(many(parser(expr)))
                 .map(|x| {
                     SExpr(SExprNode {
-                        operator: x.0,
+                        operator: box x.0,
                         operands: x.1
                     })
                 })
@@ -442,6 +442,7 @@ pub fn expr(input: State<&str>) -> ParseResult<ExprNode, &str> {
         try(parser(number).map(NumConst))
             .or(try(parser(character).map(CharConst)))
             .or(try(parser(string_const).map(StringConst)))
+            .or(try(parser(bool_const).map(BoolConst)))
             .parse_state(input)
     }
 

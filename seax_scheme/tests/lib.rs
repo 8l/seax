@@ -6,6 +6,7 @@
 ///
 /// These are based on the sample programs in Zach Allaun's Clojure SECD
 /// [implementation](https://github.com/zachallaun/secd).
+/// And from http://webdocs.cs.ualberta.ca/%7Eyou/courses/325/Mynotes/Fun/SECD-slides.html
 
 #[macro_use]
 extern crate seax_svm as svm;
@@ -106,16 +107,16 @@ fn compile_nested_arith() {
     );
 }
 
-/*
+
 /// Tests for basic branching
 ///
 /// ```lisp
-/// ((if (= 0 (- 1 1)) #t #f)
+/// (if (= 0 (- 1 1)) #t #f)
 /// ```
 #[test]
 fn compile_basic_branching_1() {
     assert_eq!(
-        scheme::compile("((if (= 0 (- 1 1)) #t #f)"),
+        scheme::compile("(if (= 0 (- 1 1)) #t #f)"),
         Ok(list!(
             InstCell(LDC), AtomCell(SInt(1)), InstCell(LDC), AtomCell(SInt(1)),
             InstCell(SUB),
@@ -146,4 +147,115 @@ fn compile_basic_branching_2() {
         ))
     );
 }
-*/
+
+/// Lambda
+///
+/// ```lisp
+/// (lambda (x y) (+ x y))
+/// ```
+///
+/// (LDF (LD (1.2) LD (1.1) + RTN))
+#[test]
+fn compile_lambda() {
+    assert_eq!(
+        scheme::compile("(lambda (x y) (+ x y))"),
+        Ok(list!(
+            InstCell(LDF),
+            ListCell(box list!(
+                InstCell(LD),
+                ListCell(box list!(
+                    AtomCell(UInt(1)), AtomCell(UInt(2))
+                    )),
+                InstCell(LD),
+                ListCell(box list!(
+                    AtomCell(UInt(1)), AtomCell(UInt(1))
+                    )),
+                InstCell(ADD),
+                InstCell(RET)
+            ))
+        ))
+    )
+}
+
+/// Lambda application
+///
+/// ```lisp
+/// ((lambda (x y) (+ x y)) 2 3)
+/// ```
+///
+/// (NIL LDC 3 CONS LDC 2 CONS LDF (LD (1.2) LD (1.1) + RTN) AP)
+#[test]
+fn compile_lambda_ap() {
+    assert_eq!(
+        scheme::compile("((lambda (x y) (+ x y)) 2 3)"),
+        Ok(list!(
+            InstCell(NIL),
+            InstCell(LDC), AtomCell(SInt(3)),
+            InstCell(CONS),
+            InstCell(LDC), AtomCell(SInt(2)),
+            InstCell(CONS),
+            InstCell(LDF),
+            ListCell(box list!(
+                InstCell(LD), ListCell(box list!(
+                    AtomCell(UInt(1)), AtomCell(UInt(2))
+                    )),
+                InstCell(LD), ListCell(box list!(
+                    AtomCell(UInt(1)), AtomCell(UInt(1))
+                    )),
+                InstCell(ADD),
+                InstCell(RET)
+            )),
+            InstCell(AP)
+        ))
+    )
+}
+
+/// Nested lambdas
+///
+/// ```lisp
+/// ((lambda (z) ((lambda (x y) (+ (- x y) z)) 3 5)) 6)
+/// ```
+///
+/// ```seax
+/// (NIL LDC 6 CONS LDF
+///     (NIL LDC 5 CONS LDC 3 CONS
+///         LDF
+///             (LD (2.1) LD (1.2) LD (1.1) SUB ADD RTN)
+///         AP
+///         RTN)
+///     AP
+/// ```
+#[test]
+fn compile_nested_lambda() {
+    assert_eq!(
+        scheme::compile("((lambda (z) ((lambda (x y) (+ (- x y) z)) 3 5)) 6)"),
+        Ok(list!(
+            InstCell(NIL),
+            InstCell(LDC), AtomCell(SInt(6)), InstCell(CONS),
+            InstCell(LDF),
+            ListCell(box list!(
+                InstCell(NIL),
+                InstCell(LDC), AtomCell(SInt(5)), InstCell(CONS),
+                InstCell(LDC), AtomCell(SInt(3)), InstCell(CONS),
+                InstCell(LDF),
+                ListCell(box list!(
+                    InstCell(LD), ListCell(box list!(
+                        AtomCell(UInt(2)),AtomCell(UInt(1))
+                        )),
+                    InstCell(LD), ListCell(box list!(
+                        AtomCell(UInt(1)),AtomCell(UInt(2))
+                        )),
+                    InstCell(LD), ListCell(box list!(
+                        AtomCell(UInt(1)),AtomCell(UInt(1))
+                        )),
+                    InstCell(SUB),
+                    InstCell(ADD),
+                    InstCell(RET)
+                )),
+                InstCell(AP),
+                InstCell(RET)
+            )),
+            InstCell(AP)
+        ))
+    )
+}
